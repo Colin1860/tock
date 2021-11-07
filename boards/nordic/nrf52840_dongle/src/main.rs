@@ -390,8 +390,7 @@ pub unsafe fn main() {
 
     nrf52_components::NrfClockComponent::new(&base_peripherals.clock).finalize(());
 
-    let scheduler = components::sched::round_robin::RoundRobinComponent::new(&PROCESSES)
-        .finalize(components::rr_component_helper!(NUM_PROCS));
+    let scheduler = components::sched::priority::PriorityComponent::new(board_kernel).finalize(());
 
     let platform = Platform {
         button,
