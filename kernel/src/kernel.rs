@@ -11,6 +11,7 @@ use core::ptr::NonNull;
 use crate::capabilities;
 use crate::config;
 use crate::debug;
+use crate::dwt;
 use crate::dynamic_deferred_call::DynamicDeferredCall;
 use crate::errorcode::ErrorCode;
 use crate::grant::Grant;
@@ -504,6 +505,9 @@ impl Kernel {
         capability: &dyn capabilities::MainLoopCapability,
     ) -> ! {
         resources.watchdog().setup();
+        unsafe {
+            dwt::reset_timer();
+        }
         loop {
             self.kernel_loop_operation(resources, chip, ipc, false, capability);
         }
@@ -599,6 +603,9 @@ impl Kernel {
             };
             if !continue_process {
                 return_reason = StoppedExecutingReason::KernelPreemption;
+                unsafe {
+                    debug!("Timer started: {}", dwt::timer_started());
+                }
                 break;
             }
 

@@ -198,9 +198,16 @@ pub unsafe extern "C" fn generic_isr_arm_v7m() {
     /* Set pending bit */
     str r0, [r3, r2, lsl #2]
 
+    // STARTS THE DWT TIMER
+    mov r0, #1
+    mov r3, #0x1000
+    movt r3, #0xe000
+    str r0, [r3]
+
     // Now we can return from the interrupt context and resume what we were
     // doing. If an app was executing we will switch to the kernel so it can
     // choose whether to service the interrupt.
+
     bx lr
     ",
         options(noreturn)

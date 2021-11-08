@@ -1,5 +1,6 @@
 use tock_registers::interfaces::{Readable, Writeable};
 
+use crate::debug;
 use crate::utilities::registers::ReadWrite;
 use crate::utilities::StaticRef;
 
@@ -19,6 +20,11 @@ pub unsafe fn reset_timer() {
 
 pub unsafe fn start_timer() {
     DWT.ctrl.set(1);
+}
+
+pub unsafe fn timer_started() -> bool {
+    debug!("{}", DWT.cycnt.get());
+    DWT.cycnt.get() != 0
 }
 
 pub unsafe fn stop_timer() {
