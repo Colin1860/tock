@@ -603,9 +603,6 @@ impl Kernel {
             };
             if !continue_process {
                 return_reason = StoppedExecutingReason::KernelPreemption;
-                unsafe {
-                    debug!("Timer started: {}", dwt::timer_started());
-                }
                 break;
             }
 

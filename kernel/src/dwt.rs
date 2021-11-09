@@ -9,6 +9,9 @@ struct DWTRegisters {
     cycnt: ReadWrite<u32>,
 }
 
+static mut BUFFER: [u32; 50] = [0; 50];
+static mut INDEX: u32 = 0;
+
 const DWT: StaticRef<DWTRegisters> = unsafe { StaticRef::new(0xE0001000 as *const _) };
 const DEMCR: StaticRef<ReadWrite<u32>> = unsafe { StaticRef::new(0xE000EDFC as *const _) };
 
@@ -23,7 +26,6 @@ pub unsafe fn start_timer() {
 }
 
 pub unsafe fn timer_started() -> bool {
-    debug!("{}", DWT.cycnt.get());
     DWT.cycnt.get() != 0
 }
 
@@ -32,5 +34,18 @@ pub unsafe fn stop_timer() {
 }
 
 pub unsafe fn get_time() -> u32 {
-    DWT.cycnt.get()
+    let ticks = DWT.cycnt.get();
+    BUFFER[INDEX as usize] = ticks;
+    INDEX = (INDEX + 1) % 50;
+    return ticks;
+}
+
+pub unsafe fn show_measured_data() {
+    let _sum: u32 = BUFFER.iter().sum();
+    //debug!("AVG: {}", sum / INDEX)
+    //debug!("data")
+}
+
+pub unsafe fn showworthy() -> bool {
+    INDEX > 15
 }
