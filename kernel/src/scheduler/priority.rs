@@ -16,6 +16,7 @@ use crate::platform::chip::Chip;
 use crate::process::ProcessId;
 use crate::scheduler::{Scheduler, SchedulingDecision};
 use crate::utilities::cells::OptionalCell;
+use crate::{debug, dwt};
 
 /// Priority scheduler based on the order of processes in the `PROCESSES` array.
 pub struct PrioritySched {
@@ -57,7 +58,7 @@ impl<C: Chip> Scheduler<C> for PrioritySched {
         // priority processes have become ready. This check is necessary because
         // a system call by this process could make another process ready, if
         // this app is communicating via IPC with a higher priority app.
-        !(chip.has_pending_interrupts()
+        let ret = !(chip.has_pending_interrupts()
             || DynamicDeferredCall::global_instance_calls_pending().unwrap_or(false)
             || self
                 .kernel
@@ -67,7 +68,11 @@ impl<C: Chip> Scheduler<C> for PrioritySched {
                     self.running.map_or(false, |running| {
                         ready_proc.processid().index < running.index
                     })
-                }))
+                }));
+        let t = dwt::get_time();
+
+        debug!("Noticed interrupt at: {}", t);
+        ret
     }
 
     fn result(&self, _: StoppedExecutingReason, _: Option<u32>) {
