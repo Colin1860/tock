@@ -23,4 +23,5 @@ set remote memory-write-packet-size fixed
 # layout split
 # layout service_pending_interrupts
 b initialize_ram_jump_to_main
-dir /Users/colinmikolajczak/Documents/University/tock
+b generic_isr_arm_v7m
+dir /Users/colinmikolajczak/Documents/University/Bachelorarbeit/tock
