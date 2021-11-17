@@ -11,6 +11,7 @@
 - From "ISR2_EXIT_START" in chips/nrf5x/src/gpio.rs:589
 - To "ISR2_EXIT_STOP" in arch/cortex-m/src/lib.rs:329
 - Took in average: 1250 ticks
+- Note: Don't know why this takes so much longer than the entry part of the isr2 yet
 
 ## Preemptive Task Switch
 
