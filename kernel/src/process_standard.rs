@@ -13,6 +13,7 @@ use crate::collections::queue::Queue;
 use crate::collections::ring_buffer::RingBuffer;
 use crate::config;
 use crate::debug;
+use crate::dwt;
 use crate::errorcode::ErrorCode;
 use crate::kernel::Kernel;
 use crate::platform::chip::Chip;
@@ -1041,6 +1042,7 @@ impl<C: Chip> Process for ProcessStandard<'_, C> {
                 // we pass are valid, ensuring this context switch is safe.
                 // Therefore we encapsulate the `unsafe`.
                 unsafe {
+                    // PREEMPTIVE_SWITCH_STOP
                     let (switch_reason, optional_stack_pointer) = self
                         .chip
                         .userspace_kernel_boundary()

@@ -1,9 +1,9 @@
 use crate::deferred_call_tasks::DeferredCallTask;
 use core::fmt::Write;
 use cortexm4::{self, nvic};
+use kernel::deferred_call;
 use kernel::hil::time::Alarm;
 use kernel::platform::chip::InterruptService;
-use kernel::{deferred_call, dwt};
 
 pub struct NRF52<'a, I: InterruptService<DeferredCallTask> + 'a> {
     mpu: cortexm4::mpu::MPU,
@@ -142,10 +142,6 @@ impl<'a> kernel::platform::chip::InterruptService<DeferredCallTask>
             _ => return false,
         }
 
-        dwt::stop_timer();
-        let _ = dwt::get_time();
-        dwt::show_measured_data();
-        dwt::reset_timer();
         true
     }
     unsafe fn service_deferred_call(&self, task: DeferredCallTask) -> bool {
