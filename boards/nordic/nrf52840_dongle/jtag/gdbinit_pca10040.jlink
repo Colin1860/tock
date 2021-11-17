@@ -19,9 +19,10 @@ monitor speed auto
 # Setup GDB FOR FASTER DOWNLOADS
 set remote memory-write-packet-size 1024
 set remote memory-write-packet-size fixed
-# tui enable
-# layout split
+tui enable
+layout reg
 # layout service_pending_interrupts
 b initialize_ram_jump_to_main
-b generic_isr_arm_v7m
-dir /Users/colinmikolajczak/Documents/University/Bachelorarbeit/tock
+dir /Users/colinmikolajczak/Documents/Bachelorarbeit/tock
+b chips/nrf5x/src/gpio.rs:589
+b arch/cortex-m/src/lib.rs:300

@@ -58,20 +58,22 @@ impl<C: Chip> Scheduler<C> for PrioritySched {
         // priority processes have become ready. This check is necessary because
         // a system call by this process could make another process ready, if
         // this app is communicating via IPC with a higher priority app.
-        let ret = !(chip.has_pending_interrupts()
-            || DynamicDeferredCall::global_instance_calls_pending().unwrap_or(false)
-            || self
-                .kernel
-                .get_process_iter()
-                .find(|proc| proc.ready())
-                .map_or(false, |ready_proc| {
-                    self.running.map_or(false, |running| {
-                        ready_proc.processid().index < running.index
-                    })
-                }));
-        let t = dwt::get_time();
 
-        debug!("Noticed interrupt at: {}", t);
+        let has_pending = chip.has_pending_interrupts();
+        let calls_pending = DynamicDeferredCall::global_instance_calls_pending().unwrap_or(false);
+        let higher_process = self
+            .kernel
+            .get_process_iter()
+            .find(|proc| proc.ready())
+            .map_or(false, |ready_proc| {
+                self.running.map_or(false, |running| {
+                    ready_proc.processid().index < running.index
+                })
+            });
+
+        // PREEMPTIVE_SWITCH_START
+        let ret = !(has_pending || calls_pending || higher_process);
+
         ret
     }
 

@@ -8,6 +8,7 @@ use core::ops::{Index, IndexMut};
 use enum_primitive::cast::FromPrimitive;
 use enum_primitive::enum_from_primitive;
 use kernel::debug;
+use kernel::dwt;
 use kernel::hil;
 use kernel::utilities::cells::OptionalCell;
 use kernel::utilities::registers::interfaces::{ReadWriteable, Readable, Writeable};
@@ -571,6 +572,7 @@ impl<'a, const N: usize> Port<'a, N> {
     /// GPIOTE interrupt: check each GPIOTE channel, if any has
     /// fired then trigger its corresponding pin's interrupt handler.
     pub fn handle_interrupt(&self) {
+        // ISR2_LATENCY_STOP
         // do this just to get a pointer the memory map
         // doesn't matter which pin is used because it is the same
         let pin_registers = self.pins[0].gpiote_registers;
@@ -583,5 +585,7 @@ impl<'a, const N: usize> Port<'a, N> {
                 self.pins[pin].handle_interrupt();
             }
         }
+
+        // ISR2_EXIT_START
     }
 }
