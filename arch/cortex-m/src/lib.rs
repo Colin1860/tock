@@ -328,16 +328,17 @@ pub unsafe extern "C" fn switch_to_user_arm_v7m(
     // KERNEL_TO_APP
     // STOP_ISR2_EXIT
     // STOPS THE DWT TIMER
-    // mov r0, #0
-    // mov r3, #0x1000
-    // movt r3, #0xe000
-    // str r0, [r3]
+    mov r0, #0
+    mov r3, #0x1000
+    movt r3, #0xe000
+    str r0, [r3]
 
-    // mov r3, #0x1004
-    // movt r3, #0xe000
-    // ldr r11, [r3]
+    mov r3, #0x1004
+    movt r3, #0xe000
+    ldr r11, [r3]
+    mov r10, r11
 
-    // str r0, [r3]
+    str r0, [r3]
 
     // SWITCH
     svc 0xff   // It doesn't matter which SVC number we use here as it has no
