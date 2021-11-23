@@ -8,8 +8,6 @@ struct DWTRegisters {
     ctrl: ReadWrite<u32>,
     cycnt: ReadWrite<u32>,
 }
-
-static mut STOPPED: bool = false;
 // keep track of last process,
 // in case we want to measure switch from process 1 to 0 e.g
 pub static mut LAST: usize = 500;
@@ -23,25 +21,18 @@ pub unsafe fn reset_timer() {
     DEMCR.set(DEMCR.get() | 0x01000000);
     DWT.cycnt.set(0); // reset counter
     DWT.ctrl.set(0); // disable counter
-    STOPPED = true;
+}
+
+pub unsafe fn is_enabled() -> bool {
+    DWT.ctrl.get() & 0x00000001 > 0
 }
 
 pub unsafe fn start_timer() {
     DWT.ctrl.set(1);
-    STOPPED = false;
-}
-
-pub unsafe fn timer_started() -> bool {
-    !STOPPED
-}
-
-pub unsafe fn timer_stopped() -> bool {
-    STOPPED
 }
 
 pub unsafe fn stop_timer() {
     DWT.ctrl.set(0);
-    STOPPED = true;
 }
 
 pub unsafe fn get_time() -> u32 {
