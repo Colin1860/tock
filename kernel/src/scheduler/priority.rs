@@ -10,13 +10,13 @@
 //! is running. The only way for a process to longer be the highest priority is
 //! for an interrupt to occur, which will cause the process to stop running.
 
+use crate::dwt;
 use crate::dynamic_deferred_call::DynamicDeferredCall;
 use crate::kernel::{Kernel, StoppedExecutingReason};
 use crate::platform::chip::Chip;
 use crate::process::ProcessId;
 use crate::scheduler::{Scheduler, SchedulingDecision};
 use crate::utilities::cells::OptionalCell;
-use crate::{debug, dwt};
 
 /// Priority scheduler based on the order of processes in the `PROCESSES` array.
 pub struct PrioritySched {
@@ -48,6 +48,17 @@ impl<C: Chip> Scheduler<C> for PrioritySched {
                 .find(|&proc| proc.ready())
                 .map_or(None, |proc| Some(proc.processid()));
             self.running.insert(next);
+            // PREEMPTIVE_SWITCH_START
+            unsafe {
+                if let Some(next) = next {
+                    if next.index < dwt::LAST {
+                        dwt::reset_timer();
+                        dwt::start_timer();
+                    }
+
+                    dwt::LAST = next.index;
+                }
+            }
 
             SchedulingDecision::RunProcess((next.unwrap(), None))
         }
@@ -71,7 +82,6 @@ impl<C: Chip> Scheduler<C> for PrioritySched {
                 })
             });
 
-        // PREEMPTIVE_SWITCH_START
         let ret = !(has_pending || calls_pending || higher_process);
 
         ret

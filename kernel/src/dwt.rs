@@ -1,6 +1,5 @@
 use tock_registers::interfaces::{Readable, Writeable};
 
-use crate::debug;
 use crate::utilities::registers::ReadWrite;
 use crate::utilities::StaticRef;
 
@@ -36,6 +35,5 @@ pub unsafe fn stop_timer() {
 }
 
 pub unsafe fn get_time() -> u32 {
-    let ticks = DWT.cycnt.get();
-    return ticks;
+    DWT.cycnt.get()
 }

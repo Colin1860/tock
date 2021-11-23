@@ -83,6 +83,7 @@ use kernel::hil::time::Counter;
 #[allow(unused_imports)]
 use kernel::hil::usb::Client;
 use kernel::platform::{KernelResources, SyscallDriverLookup};
+use kernel::scheduler::priority::PrioritySched;
 use kernel::scheduler::round_robin::RoundRobinSched;
 #[allow(unused_imports)]
 use kernel::{capabilities, create_capability, debug, debug_gpio, debug_verbose, static_init};
@@ -193,7 +194,7 @@ pub struct Platform {
         'static,
         capsules::virtual_spi::VirtualSpiMasterDevice<'static, nrf52840::spi::SPIM>,
     >,
-    scheduler: &'static RoundRobinSched<'static>,
+    scheduler: &'static PrioritySched,
     systick: cortexm4::systick::SysTick,
 }
 
@@ -243,7 +244,7 @@ impl KernelResources<nrf52840::chip::NRF52<'static, Nrf52840DefaultPeripherals<'
     type SyscallDriverLookup = Self;
     type SyscallFilter = ();
     type ProcessFault = ();
-    type Scheduler = RoundRobinSched<'static>;
+    type Scheduler = PrioritySched;
     type SchedulerTimer = cortexm4::systick::SysTick;
     type WatchDog = ();
     type ContextSwitchCallback = ();
@@ -655,8 +656,7 @@ pub unsafe fn main() {
     // ctap.enable();
     // ctap.attach();
 
-    let scheduler = components::sched::round_robin::RoundRobinComponent::new(&PROCESSES)
-        .finalize(components::rr_component_helper!(NUM_PROCS));
+    let scheduler = components::sched::priority::PriorityComponent::new(board_kernel).finalize(());
 
     let platform = Platform {
         button,

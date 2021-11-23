@@ -333,12 +333,13 @@ pub unsafe extern "C" fn switch_to_user_arm_v7m(
     movt r3, #0xe000
     str r0, [r3]
 
+    ldr r0, [r3]
+
     mov r3, #0x1004
     movt r3, #0xe000
     ldr r11, [r3]
     mov r10, r11
 
-    str r0, [r3]
 
     // SWITCH
     svc 0xff   // It doesn't matter which SVC number we use here as it has no

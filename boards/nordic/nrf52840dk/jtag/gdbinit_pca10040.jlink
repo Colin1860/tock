@@ -25,3 +25,4 @@ layout reg
 b initialize_ram_jump_to_main
 dir /Users/colinmikolajczak/Documents/Bachelorarbeit/tock
 b arch/cortex-m/src/lib.rs:300
+b kernel/src/scheduler/priority.rs:50
