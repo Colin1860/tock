@@ -25,10 +25,12 @@
 - To _NEW_TASK_FROM_ISR_STOP_ in kernel/src/process_standard.rs.:1045
 - Took in average: 4450 ticks
 
+## Cooperative Task Switch
+
+- From _COOPERATIVE_SWITCH_START_ in kernel/src/scheduler/cooperative.rs:81
+- To _COOPERATIVE_SWITCH_STOP_ in kernel/src/process_standard.rs.:1045
+- Took in average: 3895 ticks
+
 ## Notes:
 
 - I'm writing once after each measurement, when the timer is already stopped, to the debug output via Segger RTT, which comes with considerable overhead as i experienced. Even though the actual measured code is free from debug output, i can't rule out that the measured value is not impacted by the console output.
-
-## To come shortly:
-
-### Cooperative Task Switch
