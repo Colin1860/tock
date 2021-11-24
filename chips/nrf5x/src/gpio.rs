@@ -586,6 +586,7 @@ impl<'a, const N: usize> Port<'a, N> {
             }
         }
 
+        // NEW_TASK_FROM_ISR_START
         // ISR2_EXIT_START
     }
 }

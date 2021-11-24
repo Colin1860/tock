@@ -49,16 +49,6 @@ impl<C: Chip> Scheduler<C> for PrioritySched {
                 .map_or(None, |proc| Some(proc.processid()));
             self.running.insert(next);
             // PREEMPTIVE_SWITCH_START
-            unsafe {
-                if let Some(next) = next {
-                    if next.index < dwt::LAST {
-                        dwt::reset_timer();
-                        dwt::start_timer();
-                    }
-
-                    dwt::LAST = next.index;
-                }
-            }
 
             SchedulingDecision::RunProcess((next.unwrap(), None))
         }
