@@ -15,9 +15,9 @@
 
 ## Preemptive Task Switch
 
-- From _PREEMPTIVE_SWITCH_START_ in kernel/src/scheduler/priority.rs:74
+- From _PREEMPTIVE_SWITCH_START_ in kernel/src/scheduler/priority.rs:51
 - To _PREEMPTIVE_SWITCH_STOP_ in kernel/src/process_standard.rs.:1045
-- Took in average: 2580 ticks
+- Took in average: 4250 ticks
 
 ## To come shortly:
 
