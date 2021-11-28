@@ -185,6 +185,19 @@ impl<'a, I: InterruptService<DeferredCallTask> + 'a> kernel::platform::chip::Chi
         }
     }
 
+    fn toggle_interrupt(&self, enable: bool) -> bool {
+        unsafe {
+            let n = nvic::Nvic::new(17);
+            if enable {
+                n.enable();
+                true
+            } else {
+                n.disable();
+                false
+            }
+        }
+    }
+
     fn has_pending_interrupts(&self) -> bool {
         unsafe { nvic::has_pending() || deferred_call::has_tasks() }
     }

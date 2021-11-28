@@ -33,6 +33,11 @@ pub trait Chip {
     /// Ask the chip to check if there are any pending interrupts.
     fn has_pending_interrupts(&self) -> bool;
 
+    // dummy impl, param is for indicating whether enable or disable, return value if disabled now or enabled
+    fn toggle_interrupt(&self, _enable: bool) -> bool {
+        true
+    }
+
     /// Returns a reference to the implementation for the MPU on this chip.
     fn mpu(&self) -> &Self::MPU;
 
