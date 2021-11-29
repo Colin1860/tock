@@ -2,7 +2,7 @@
 
 ## Description of measured metrics
 
-- Following the "Standardized RTOS benchmarks metrics" Jim Cooling describes in his book "Real-time operating system - Book 1" and the benchmarks the ErikaOS team provides I'm measuring five different metrics.
+- Following the "Standardized RTOS benchmarks metrics" Jim Cooling describes in his book "Real-time operating systems - Book 1" and the benchmarks the ErikaOS team provides I'm measuring five different metrics.
 
 - Interrupt Service Routine latency -> time elapsed from when the kernel receives an interrupt until execution of the first instruction of the ISR
 
