@@ -1,5 +1,9 @@
 # Measurements
 
+## Sources
+
+- <https://erika.tuxfamily.org/wiki/index.php?title=Erika_Enterprise_Benchmark_for_Cortex_M4>
+
 ## Description of measured metrics
 
 - Following the "Standardized RTOS benchmarks metrics" Jim Cooling describes in his book "Real-time operating systems - Book 1" and the benchmarks the ErikaOS team provides I'm measuring five different metrics.
