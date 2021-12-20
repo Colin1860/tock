@@ -10,6 +10,7 @@
 //! is running. The only way for a process to longer be the highest priority is
 //! for an interrupt to occur, which will cause the process to stop running.
 
+use crate::dwt;
 use crate::dynamic_deferred_call::DynamicDeferredCall;
 use crate::kernel::{Kernel, StoppedExecutingReason};
 use crate::platform::chip::Chip;
@@ -47,6 +48,7 @@ impl<C: Chip> Scheduler<C> for PrioritySched {
                 .find(|&proc| proc.ready())
                 .map_or(None, |proc| Some(proc.processid()));
             self.running.insert(next);
+            // PREEMPTIVE_SWITCH_START
 
             SchedulingDecision::RunProcess((next.unwrap(), None))
         }
@@ -57,17 +59,22 @@ impl<C: Chip> Scheduler<C> for PrioritySched {
         // priority processes have become ready. This check is necessary because
         // a system call by this process could make another process ready, if
         // this app is communicating via IPC with a higher priority app.
-        !(chip.has_pending_interrupts()
-            || DynamicDeferredCall::global_instance_calls_pending().unwrap_or(false)
-            || self
-                .kernel
-                .get_process_iter()
-                .find(|proc| proc.ready())
-                .map_or(false, |ready_proc| {
-                    self.running.map_or(false, |running| {
-                        ready_proc.processid().index < running.index
-                    })
-                }))
+
+        let has_pending = chip.has_pending_interrupts();
+        let calls_pending = DynamicDeferredCall::global_instance_calls_pending().unwrap_or(false);
+        let higher_process = self
+            .kernel
+            .get_process_iter()
+            .find(|proc| proc.ready())
+            .map_or(false, |ready_proc| {
+                self.running.map_or(false, |running| {
+                    ready_proc.processid().index < running.index
+                })
+            });
+
+        let ret = !(has_pending || calls_pending || higher_process);
+
+        ret
     }
 
     fn result(&self, _: StoppedExecutingReason, _: Option<u32>) {

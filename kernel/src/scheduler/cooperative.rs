@@ -12,6 +12,7 @@
 //! that was executing.
 
 use crate::collections::list::{List, ListLink, ListNode};
+use crate::dwt;
 use crate::kernel::{Kernel, StoppedExecutingReason};
 use crate::platform::chip::Chip;
 use crate::process::Process;
@@ -74,6 +75,19 @@ impl<'a, C: Chip> Scheduler<C> for CooperativeSched<'a> {
                     None => {
                         self.processes.push_tail(self.processes.pop_head().unwrap());
                     }
+                }
+            }
+
+            // COOPERATIVE_SWITCH_START
+
+            unsafe {
+                if let Some(next) = next {
+                    if next.index < dwt::LAST {
+                        dwt::reset_timer();
+                        dwt::start_timer();
+                    }
+
+                    dwt::LAST = next.index;
                 }
             }
 

@@ -88,7 +88,7 @@ pub unsafe extern "C" fn svc_handler_arm_v7m() {
 
     // This is a special address to return Thread mode with Process stack
     movw lr, #0xfffd
-    movt lr, #0xffff
+    movt lr, #0xffff  
     // Switch to the app.
     bx lr
 
@@ -134,6 +134,7 @@ pub unsafe extern "C" fn svc_handler_arm_v7m() {
 pub unsafe extern "C" fn generic_isr_arm_v7m() {
     asm!(
         "
+    // ISR2_LATENCY_START
     // Set thread mode to privileged to ensure we are executing as the kernel.
     // This may be redundant if the interrupt happened while the kernel code
     // was executing.
@@ -198,9 +199,11 @@ pub unsafe extern "C" fn generic_isr_arm_v7m() {
     /* Set pending bit */
     str r0, [r3, r2, lsl #2]
 
+
     // Now we can return from the interrupt context and resume what we were
     // doing. If an app was executing we will switch to the kernel so it can
     // choose whether to service the interrupt.
+
     bx lr
     ",
         options(noreturn)
@@ -322,6 +325,8 @@ pub unsafe extern "C" fn switch_to_user_arm_v7m(
     // register.
     ldmia r1, {{r4-r11}}
 
+    // KERNEL_TO_APP
+
     // SWITCH
     svc 0xff   // It doesn't matter which SVC number we use here as it has no
                // defined meaning for the Cortex-M syscall interface. Data being
@@ -329,6 +334,8 @@ pub unsafe extern "C" fn switch_to_user_arm_v7m(
 
     // When execution returns here we have switched back to the kernel from the
     // application.
+
+    // APP_TO_KERNEL
 
     // Push non-hardware-stacked registers into the saved state for the
     // application.

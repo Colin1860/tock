@@ -141,6 +141,7 @@ impl<'a> kernel::platform::chip::InterruptService<DeferredCallTask>
             crate::peripheral_interrupts::ADC => self.adc.handle_interrupt(),
             _ => return false,
         }
+
         true
     }
     unsafe fn service_deferred_call(&self, task: DeferredCallTask) -> bool {
@@ -180,6 +181,19 @@ impl<'a, I: InterruptService<DeferredCallTask> + 'a> kernel::platform::chip::Chi
                 } else {
                     break;
                 }
+            }
+        }
+    }
+
+    fn toggle_interrupt(&self, enable: bool) -> bool {
+        unsafe {
+            let n = nvic::Nvic::new(17);
+            if enable {
+                n.enable();
+                true
+            } else {
+                n.disable();
+                false
             }
         }
     }
