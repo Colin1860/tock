@@ -72,25 +72,26 @@ impl InterruptService<()> for LiteXArtyInterruptablePeripherals {
 }
 
 const NUM_PROCS: usize = 4;
-const NUM_UPCALLS_IPC: usize = NUM_PROCS + 1;
 
 // Actual memory for holding the active process structures. Need an
 // empty list at least.
 static mut PROCESSES: [Option<&'static dyn kernel::process::Process>; NUM_PROCS] =
     [None; NUM_PROCS];
 
-// Reference to the chip, led controller and UART hardware for panic
-// dumps
+// Reference to the chip, led controller, UART hardware, and process printer for
+// panic dumps.
 struct LiteXArtyPanicReferences {
     chip: Option<&'static litex_vexriscv::chip::LiteXVexRiscv<LiteXArtyInterruptablePeripherals>>,
     uart: Option<&'static litex_vexriscv::uart::LiteXUart<'static, socc::SoCRegisterFmt>>,
     led_controller:
         Option<&'static litex_vexriscv::led_controller::LiteXLedController<socc::SoCRegisterFmt>>,
+    process_printer: Option<&'static kernel::process::ProcessPrinterText>,
 }
 static mut PANIC_REFERENCES: LiteXArtyPanicReferences = LiteXArtyPanicReferences {
     chip: None,
     uart: None,
     led_controller: None,
+    process_printer: None,
 };
 
 // How should the kernel respond when a process faults.
@@ -453,6 +454,11 @@ pub unsafe fn main() {
 
     PANIC_REFERENCES.chip = Some(chip);
 
+    let process_printer =
+        components::process_printer::ProcessPrinterTextComponent::new().finalize(());
+
+    PANIC_REFERENCES.process_printer = Some(process_printer);
+
     // Enable RISC-V interrupts globally
     csr::CSR
         .mie
@@ -528,7 +534,7 @@ pub unsafe fn main() {
     board_kernel.kernel_loop(
         &litex_arty,
         chip,
-        None::<&kernel::ipc::IPC<NUM_PROCS, NUM_UPCALLS_IPC>>,
+        None::<&kernel::ipc::IPC<NUM_PROCS>>,
         &main_loop_cap,
     );
 }

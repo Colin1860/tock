@@ -27,13 +27,14 @@ pub mod io;
 
 // Number of concurrent processes this platform supports.
 const NUM_PROCS: usize = 4;
-const NUM_UPCALLS_IPC: usize = NUM_PROCS + 1;
 
 // Actual memory for holding the active process structures.
 static mut PROCESSES: [Option<&'static dyn kernel::process::Process>; NUM_PROCS] = [None; 4];
 
 // Static reference to chip for panic dumps.
 static mut CHIP: Option<&'static apollo3::chip::Apollo3<Apollo3DefaultPeripherals>> = None;
+// Static reference to process printer for panic dumps.
+static mut PROCESS_PRINTER: Option<&'static kernel::process::ProcessPrinterText> = None;
 
 // How should the kernel respond when a process faults.
 const FAULT_RESPONSE: kernel::process::PanicFaultPolicy = kernel::process::PanicFaultPolicy {};
@@ -221,6 +222,11 @@ pub unsafe fn main() {
     )
     .finalize(components::alarm_component_helper!(apollo3::stimer::STimer));
 
+    // Create a process printer for panic.
+    let process_printer =
+        components::process_printer::ProcessPrinterTextComponent::new().finalize(());
+    PROCESS_PRINTER = Some(process_printer);
+
     // Init the I2C device attached via Qwiic
     let i2c_master = static_init!(
         capsules::i2c_master::I2CMasterDriver<'static, apollo3::iom::Iom<'static>>,
@@ -315,7 +321,7 @@ pub unsafe fn main() {
     board_kernel.kernel_loop(
         artemis_nano,
         chip,
-        None::<&kernel::ipc::IPC<NUM_PROCS, NUM_UPCALLS_IPC>>,
+        None::<&kernel::ipc::IPC<NUM_PROCS>>,
         &main_loop_cap,
     );
 }
