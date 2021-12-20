@@ -1045,9 +1045,6 @@ impl<C: Chip> Process for ProcessStandard<'_, C> {
                     // PREEMPTIVE_SWITCH_STOP
                     // COOPERATIVE_SWITCH_STOP
                     // NEW_TASK_FROM_ISR_STOP
-                    dwt::stop_timer();
-                    let time = dwt::get_time();
-                    debug!("New coop task took: {} ticks", time);
                     let (switch_reason, optional_stack_pointer) = self
                         .chip
                         .userspace_kernel_boundary()

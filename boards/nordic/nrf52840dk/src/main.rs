@@ -195,7 +195,7 @@ pub struct Platform {
         'static,
         capsules::virtual_spi::VirtualSpiMasterDevice<'static, nrf52840::spi::SPIM>,
     >,
-    scheduler: &'static CooperativeSched<'static>,
+    scheduler: &'static PrioritySched,
     systick: cortexm4::systick::SysTick,
 }
 
@@ -245,7 +245,7 @@ impl KernelResources<nrf52840::chip::NRF52<'static, Nrf52840DefaultPeripherals<'
     type SyscallDriverLookup = Self;
     type SyscallFilter = ();
     type ProcessFault = ();
-    type Scheduler = CooperativeSched<'static>;
+    type Scheduler = PrioritySched;
     type SchedulerTimer = cortexm4::systick::SysTick;
     type WatchDog = ();
     type ContextSwitchCallback = ();
@@ -657,9 +657,9 @@ pub unsafe fn main() {
     // ctap.enable();
     // ctap.attach();
 
-    //let scheduler = components::sched::priority::PriorityComponent::new(board_kernel).finalize(());
-    let scheduler = components::sched::cooperative::CooperativeComponent::new(&PROCESSES)
-        .finalize(components::coop_component_helper!(NUM_PROCS));
+    let scheduler = components::sched::priority::PriorityComponent::new(board_kernel).finalize(());
+    // let scheduler = components::sched::cooperative::CooperativeComponent::new(&PROCESSES)
+    //     .finalize(components::coop_component_helper!(NUM_PROCS));
 
     let platform = Platform {
         button,
