@@ -78,7 +78,6 @@ impl InterruptService<()> for LiteXSimInterruptablePeripherals {
 }
 
 const NUM_PROCS: usize = 4;
-const NUM_UPCALLS_IPC: usize = NUM_PROCS + 1;
 
 // Actual memory for holding the active process structures. Need an
 // empty list at least.
@@ -89,10 +88,12 @@ static mut PROCESSES: [Option<&'static dyn kernel::process::Process>; NUM_PROCS]
 struct LiteXSimPanicReferences {
     chip: Option<&'static litex_vexriscv::chip::LiteXVexRiscv<LiteXSimInterruptablePeripherals>>,
     uart: Option<&'static litex_vexriscv::uart::LiteXUart<'static, socc::SoCRegisterFmt>>,
+    process_printer: Option<&'static kernel::process::ProcessPrinterText>,
 }
 static mut PANIC_REFERENCES: LiteXSimPanicReferences = LiteXSimPanicReferences {
     chip: None,
     uart: None,
+    process_printer: None,
 };
 
 // How should the kernel respond when a process faults.
@@ -139,7 +140,7 @@ struct LiteXSim {
             >,
         >,
     >,
-    ipc: kernel::ipc::IPC<NUM_PROCS, NUM_UPCALLS_IPC>,
+    ipc: kernel::ipc::IPC<NUM_PROCS>,
     scheduler: &'static CooperativeSched<'static>,
     scheduler_timer: &'static VirtualSchedulerTimer<
         VirtualMuxAlarm<
@@ -557,6 +558,11 @@ pub unsafe fn main() {
     );
 
     PANIC_REFERENCES.chip = Some(chip);
+
+    let process_printer =
+        components::process_printer::ProcessPrinterTextComponent::new().finalize(());
+
+    PANIC_REFERENCES.process_printer = Some(process_printer);
 
     // Enable RISC-V interrupts globally
     csr::CSR
