@@ -655,6 +655,7 @@ impl Kernel {
                         Some(ContextSwitchReason::Interrupted) => {
                             if scheduler_timer.get_remaining_us().is_none() {
                                 // This interrupt was a timeslice expiration.
+                                debug!("Exceeded time");
                                 process.debug_timeslice_expired();
                                 return_reason = StoppedExecutingReason::TimesliceExpired;
                                 break;

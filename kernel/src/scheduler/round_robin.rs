@@ -17,6 +17,7 @@
 use core::cell::Cell;
 
 use crate::collections::list::{List, ListLink, ListNode};
+use crate::debug;
 use crate::kernel::{Kernel, StoppedExecutingReason};
 use crate::platform::chip::Chip;
 use crate::process::Process;
@@ -72,6 +73,8 @@ impl<'a, C: Chip> Scheduler<C> for RoundRobinSched<'a> {
             let mut next = None; // This will be replaced, bc a process is guaranteed
                                  // to be ready if processes_blocked() is false
 
+            let mut next_proc: Option<&dyn Process> = None;
+
             // Find next ready process. Place any *empty* process slots, or not-ready
             // processes, at the back of the queue.
             for node in self.processes.iter() {
@@ -79,6 +82,7 @@ impl<'a, C: Chip> Scheduler<C> for RoundRobinSched<'a> {
                     Some(proc) => {
                         if proc.ready() {
                             next = Some(proc.processid());
+                            next_proc = Some(*proc);
                             break;
                         }
                         self.processes.push_tail(self.processes.pop_head().unwrap());
@@ -92,7 +96,15 @@ impl<'a, C: Chip> Scheduler<C> for RoundRobinSched<'a> {
                 self.time_remaining.get()
             } else {
                 // grant a fresh timeslice
-                self.time_remaining.set(Self::DEFAULT_TIMESLICE_US);
+                self.time_remaining.set(
+                    next_proc
+                        .unwrap()
+                        .get_timeslice()
+                        .map(|x| x as u32)
+                        .unwrap_or(Self::DEFAULT_TIMESLICE_US),
+                );
+
+                debug!("Set time to: {}", self.time_remaining.get());
                 Self::DEFAULT_TIMESLICE_US
             };
             assert!(timeslice != 0);

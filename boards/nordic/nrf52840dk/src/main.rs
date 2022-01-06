@@ -88,7 +88,8 @@ use kernel::scheduler::priority::PrioritySched;
 use kernel::scheduler::round_robin::RoundRobinSched;
 #[allow(unused_imports)]
 use kernel::{capabilities, create_capability, debug, debug_gpio, debug_verbose, static_init};
-use nrf52840::gpio::Pin;
+use nrf52840::base_interrupts::TIMER0;
+use nrf52840::gpio::{Pin, NUM_PINS};
 use nrf52840::interrupt_service::Nrf52840DefaultPeripherals;
 use nrf52_components::{self, UartChannel, UartPins};
 
@@ -145,6 +146,10 @@ const FAULT_RESPONSE: kernel::process::PanicFaultPolicy = kernel::process::Panic
 // Number of concurrent processes this platform supports.
 const NUM_PROCS: usize = 8;
 
+static mut PRIORITY_SLICES: &[u16] = &[20000, 10000];
+
+static mut TIMESLICES: [Option<u16>; NUM_PROCS] = [None; NUM_PROCS];
+
 static mut PROCESSES: [Option<&'static dyn kernel::process::Process>; NUM_PROCS] =
     [None; NUM_PROCS];
 
@@ -195,7 +200,7 @@ pub struct Platform {
         'static,
         capsules::virtual_spi::VirtualSpiMasterDevice<'static, nrf52840::spi::SPIM>,
     >,
-    scheduler: &'static PrioritySched,
+    scheduler: &'static RoundRobinSched<'static>,
     systick: cortexm4::systick::SysTick,
 }
 
@@ -245,7 +250,7 @@ impl KernelResources<nrf52840::chip::NRF52<'static, Nrf52840DefaultPeripherals<'
     type SyscallDriverLookup = Self;
     type SyscallFilter = ();
     type ProcessFault = ();
-    type Scheduler = PrioritySched;
+    type Scheduler = RoundRobinSched<'static>;
     type SchedulerTimer = cortexm4::systick::SysTick;
     type WatchDog = ();
     type ContextSwitchCallback = ();
@@ -277,6 +282,10 @@ impl KernelResources<nrf52840::chip::NRF52<'static, Nrf52840DefaultPeripherals<'
 #[no_mangle]
 pub unsafe fn main() {
     nrf52840::init();
+
+    for (i, _) in TIMESLICES.iter().enumerate() {
+        TIMESLICES[i] = PRIORITY_SLICES.get(i).map(|val| *val);
+    }
 
     let nrf52840_peripherals = get_peripherals();
 
@@ -662,9 +671,9 @@ pub unsafe fn main() {
     // ctap.enable();
     // ctap.attach();
 
-    let scheduler = components::sched::priority::PriorityComponent::new(board_kernel).finalize(());
-    // let scheduler = components::sched::cooperative::CooperativeComponent::new(&PROCESSES)
-    //     .finalize(components::coop_component_helper!(NUM_PROCS));
+    // let scheduler = components::sched::priority::PriorityComponent::new(board_kernel).finalize(());
+    let scheduler = components::sched::round_robin::RoundRobinComponent::new(&PROCESSES)
+        .finalize(components::rr_component_helper!(NUM_PROCS));
 
     let platform = Platform {
         button,
@@ -722,6 +731,7 @@ pub unsafe fn main() {
         ),
         &mut PROCESSES,
         &FAULT_RESPONSE,
+        TIMESLICES.as_slice(),
         &process_management_capability,
     )
     .unwrap_or_else(|err| {

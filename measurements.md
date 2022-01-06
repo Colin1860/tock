@@ -102,6 +102,8 @@ Measured:
 - I'm writing once after each measurement, when the timer is already stopped, to the debug output via Segger RTT, which comes with considerable overhead when the timer is not stopped as i experienced. After disabling the interrupt which is triggered when Segger RTT writes to the console, i can ensure that my debug output has no impact on the measured value.
 
 measurements without mpu:
-coop switch 3550 ticks, steady
-preempt switch 3893 ticks, steady
-new task from isr 4286 ticks, steady
+coop switch 3350 ticks, steady
+preempt switch 3693 ticks, steady
+new task from isr 3986 ticks, steady
+
+new task from isr, built into loop, 2680, steady

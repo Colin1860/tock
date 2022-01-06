@@ -217,6 +217,8 @@ pub struct ProcessStandard<'a, C: 'static + Chip> {
 
     /// Values kept so that we can print useful debug messages when apps fault.
     debug: MapCell<ProcessStandardDebug>,
+
+    timeslice: Option<u16>,
 }
 
 impl<C: Chip> Process for ProcessStandard<'_, C> {
@@ -682,6 +684,10 @@ impl<C: Chip> Process for ProcessStandard<'_, C> {
         } else {
             false
         }
+    }
+
+    fn get_timeslice(&self) -> Option<u16> {
+        self.timeslice
     }
 
     fn grant_is_allocated(&self, grant_num: usize) -> Option<bool> {
@@ -1224,6 +1230,7 @@ impl<C: 'static + Chip> ProcessStandard<'_, C> {
         fault_policy: &'static dyn ProcessFaultPolicy,
         require_kernel_version: bool,
         index: usize,
+        timeslice: Option<u16>,
     ) -> Result<(Option<&'static dyn Process>, &'a mut [u8]), ProcessLoadError> {
         // Get a slice for just the app header.
         let header_flash = app_flash
@@ -1567,6 +1574,7 @@ impl<C: 'static + Chip> ProcessStandard<'_, C> {
         process.kernel_memory_break = Cell::new(kernel_memory_break);
         process.app_break = Cell::new(initial_app_brk);
         process.grant_pointers = MapCell::new(grant_pointers);
+        process.timeslice = timeslice;
 
         process.flash = app_flash;
 

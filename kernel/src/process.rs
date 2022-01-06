@@ -408,6 +408,10 @@ pub trait Process {
     /// the process will not run again).
     fn setup_mpu(&self);
 
+    fn get_timeslice(&self) -> Option<u16> {
+        None
+    }
+
     /// Allocate a new MPU region for the process that is at least
     /// `min_region_size` bytes and lies within the specified stretch of
     /// unallocated memory.
