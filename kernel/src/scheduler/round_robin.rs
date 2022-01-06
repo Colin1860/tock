@@ -105,7 +105,7 @@ impl<'a, C: Chip> Scheduler<C> for RoundRobinSched<'a> {
                 );
 
                 debug!("Set time to: {}", self.time_remaining.get());
-                Self::DEFAULT_TIMESLICE_US
+                self.time_remaining.get()
             };
             assert!(timeslice != 0);
 

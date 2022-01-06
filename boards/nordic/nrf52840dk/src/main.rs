@@ -85,6 +85,7 @@ use kernel::hil::usb::Client;
 use kernel::platform::{KernelResources, SyscallDriverLookup};
 use kernel::scheduler::cooperative::CooperativeSched;
 use kernel::scheduler::priority::PrioritySched;
+use kernel::scheduler::priority_round_robin::{PRRProcessNode, PriorityRoundRobinSched};
 use kernel::scheduler::round_robin::RoundRobinSched;
 #[allow(unused_imports)]
 use kernel::{capabilities, create_capability, debug, debug_gpio, debug_verbose, static_init};
@@ -146,7 +147,7 @@ const FAULT_RESPONSE: kernel::process::PanicFaultPolicy = kernel::process::Panic
 // Number of concurrent processes this platform supports.
 const NUM_PROCS: usize = 8;
 
-static mut PRIORITY_SLICES: &[u16] = &[20000, 10000];
+static mut PRIORITY_SLICES: &[u16] = &[];
 
 static mut TIMESLICES: [Option<u16>; NUM_PROCS] = [None; NUM_PROCS];
 
@@ -200,7 +201,7 @@ pub struct Platform {
         'static,
         capsules::virtual_spi::VirtualSpiMasterDevice<'static, nrf52840::spi::SPIM>,
     >,
-    scheduler: &'static RoundRobinSched<'static>,
+    scheduler: &'static PriorityRoundRobinSched<'static>,
     systick: cortexm4::systick::SysTick,
 }
 
@@ -250,7 +251,7 @@ impl KernelResources<nrf52840::chip::NRF52<'static, Nrf52840DefaultPeripherals<'
     type SyscallDriverLookup = Self;
     type SyscallFilter = ();
     type ProcessFault = ();
-    type Scheduler = RoundRobinSched<'static>;
+    type Scheduler = PriorityRoundRobinSched<'static>;
     type SchedulerTimer = cortexm4::systick::SysTick;
     type WatchDog = ();
     type ContextSwitchCallback = ();
@@ -672,8 +673,9 @@ pub unsafe fn main() {
     // ctap.attach();
 
     // let scheduler = components::sched::priority::PriorityComponent::new(board_kernel).finalize(());
-    let scheduler = components::sched::round_robin::RoundRobinComponent::new(&PROCESSES)
-        .finalize(components::rr_component_helper!(NUM_PROCS));
+    let scheduler =
+        components::sched::priority_round_robin::PriorityRoundRobinComponent::new(&PROCESSES)
+            .finalize(components::prr_component_helper!(NUM_PROCS));
 
     let platform = Platform {
         button,

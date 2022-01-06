@@ -2,6 +2,8 @@
 
 use core::cell::Cell;
 
+use crate::debug;
+
 pub struct ListLink<'a, T: 'a + ?Sized>(Cell<Option<&'a T>>);
 
 impl<'a, T: ?Sized> ListLink<'a, T> {
@@ -12,6 +14,10 @@ impl<'a, T: ?Sized> ListLink<'a, T> {
 
 pub trait ListNode<'a, T: ?Sized> {
     fn next(&'a self) -> &'a ListLink<'a, T>;
+
+    fn prio(&'a self) -> Option<u32> {
+        None
+    }
 }
 
 pub struct List<'a, T: 'a + ?Sized + ListNode<'a, T>> {
@@ -40,6 +46,31 @@ impl<'a, T: ?Sized + ListNode<'a, T>> List<'a, T> {
     pub const fn new() -> List<'a, T> {
         List {
             head: ListLink(Cell::new(None)),
+        }
+    }
+
+    pub fn insert_with_prio(&self, node: &'a T) {
+        let mut cursor = self.head();
+        let mut prev: Option<&T> = None;
+
+        if self.head().is_none() {
+            self.push_head(node);
+            return;
+        }
+
+        while let Some(cur) = cursor {
+            if node.prio().unwrap() <= cur.prio().unwrap() {
+                if let Some(p) = prev {
+                    p.next().0.set(Some(node));
+                    node.next().0.set(Some(cur));
+                } else {
+                    self.push_head(node);
+                }
+                break;
+            } else {
+                prev = Some(cur);
+                cursor = cur.next().0.get();
+            }
         }
     }
 
