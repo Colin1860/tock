@@ -1,53 +1,57 @@
-use core::cell::Cell;
+use core::cmp::Ord;
+use core::fmt::Binary;
+use core::{cell::Cell, cell::RefCell};
+use heapless::binary_heap::{BinaryHeap, Min};
+use heapless::Vec;
 
+use crate::debug;
 use crate::{
-    collections::list::{List, ListLink, ListNode},
-    debug,
-    kernel::StoppedExecutingReason,
-    platform::chip::Chip,
-    process::Process,
-    scheduler::SchedulingDecision,
-    Scheduler,
+    kernel::StoppedExecutingReason, platform::chip::Chip, process::Process,
+    scheduler::SchedulingDecision, Scheduler,
 };
 
 /// A node in the linked list the scheduler uses to track processes
 /// Each node holds a pointer to a slot in the processes array
 
-pub struct PRRProcessNode<'a> {
+pub struct PRRProcessNode {
     proc: &'static Option<&'static dyn Process>,
     priority: Cell<u32>,
-    next: ListLink<'a, PRRProcessNode<'a>>,
 }
 
-impl<'a> PRRProcessNode<'a> {
-    pub fn new(proc: &'static Option<&'static dyn Process>, priority: u32) -> PRRProcessNode<'a> {
+impl PRRProcessNode {
+    pub fn new(proc: &'static Option<&'static dyn Process>, priority: u32) -> PRRProcessNode {
         PRRProcessNode {
             proc,
             priority: Cell::new(priority),
-            next: ListLink::empty(),
         }
-    }
-
-    fn set_prio(&'a self, prio: u32) {
-        self.priority.set(prio);
     }
 }
 
-impl<'a> ListNode<'a, PRRProcessNode<'a>> for PRRProcessNode<'a> {
-    fn next(&'a self) -> &'a ListLink<'a, PRRProcessNode> {
-        &self.next
+impl Ord for PRRProcessNode {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
+        self.priority.get().cmp(&other.priority.get())
     }
+}
 
-    fn prio(&'a self) -> Option<u32> {
-        Some(self.priority.get())
+impl Eq for PRRProcessNode {}
+
+impl PartialOrd for PRRProcessNode {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for PRRProcessNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.priority.get() == other.priority.get()
     }
 }
 
 /// Priority Round Robin Scheduler
 pub struct PriorityRoundRobinSched<'a> {
     time_remaining: Cell<u32>,
-    pub processes: List<'a, PRRProcessNode<'a>>,
-    pub done: List<'a, PRRProcessNode<'a>>,
+    pub processes: RefCell<BinaryHeap<&'a PRRProcessNode, Min, 8>>,
+    pub done: RefCell<Vec<&'a PRRProcessNode, 8>>,
     last_rescheduled: Cell<bool>,
 }
 
@@ -57,18 +61,19 @@ impl<'a> PriorityRoundRobinSched<'a> {
     pub const fn new() -> PriorityRoundRobinSched<'a> {
         PriorityRoundRobinSched {
             time_remaining: Cell::new(Self::DEFAULT_TIMESLICE_US),
-            processes: List::new(),
-            done: List::new(),
+            processes: RefCell::new(BinaryHeap::new()),
+            done: RefCell::new(Vec::new()),
             last_rescheduled: Cell::new(false),
         }
     }
 
     fn populate_with_new_priorities(&self) {
-        if self.processes.head().is_none() {
-            // new calculated priorities put into list
-            while self.done.head().is_some() {
-                self.processes
-                    .insert_with_prio(self.done.pop_head().unwrap());
+        if self.processes.borrow_mut().is_empty() {
+            while !self.done.borrow().is_empty() {
+                let _ = self
+                    .processes
+                    .borrow_mut()
+                    .push(self.done.borrow_mut().pop().unwrap());
             }
         }
     }
@@ -85,51 +90,36 @@ impl<'a, C: Chip> Scheduler<C> for PriorityRoundRobinSched<'a> {
 
             let mut next_proc: Option<&dyn Process> = None;
 
+            while self.processes.borrow().is_empty() {
+                debug!("I am empty");
+            }
+
             // Initial round robin scheduling not done yet
             // Find next ready process. Place any *empty* process slots, or not-ready
             // processes, at the back of the queue.
-            for node in self.processes.iter() {
-                match node.proc {
-                    Some(proc) => {
-                        if proc.ready() {
-                            next = Some(proc.processid());
-                            next_proc = Some(*proc);
-                            break;
-                        } else {
-                            self.processes.push_tail(self.processes.pop_head().unwrap());
-                        }
-                    }
-                    None => {
-                        node.set_prio(0);
-                        self.done.push_tail(self.processes.pop_head().unwrap());
-                    }
-                }
-            }
-
-            if self.processes.head().is_none() && next.is_none() {
-                self.populate_with_new_priorities();
-
-                debug!(
-                    "Priority: {}",
-                    self.processes.head().unwrap().priority.get()
-                );
-
-                for node in self.processes.iter() {
+            'check: while !self.processes.borrow().is_empty() {
+                debug!("Running top loop");
+                while let Some(node) = self.processes.borrow_mut().pop() {
                     match node.proc {
                         Some(proc) => {
                             if proc.ready() {
                                 next = Some(proc.processid());
                                 next_proc = Some(*proc);
-                                break;
+                                debug!("Priority scheduled: {}", node.priority.get());
+                                break 'check;
                             } else {
-                                self.processes.push_tail(self.processes.pop_head().unwrap());
+                                let _ = self.done.borrow_mut().push(node);
                             }
                         }
                         None => {
-                            node.set_prio(0);
-                            self.done.push_tail(self.processes.pop_head().unwrap());
+                            node.priority.set(0);
+                            let _ = self.done.borrow_mut().push(node);
                         }
                     }
+                }
+
+                if next.is_none() {
+                    self.populate_with_new_priorities();
                 }
             }
 
@@ -158,7 +148,7 @@ impl<'a, C: Chip> Scheduler<C> for PriorityRoundRobinSched<'a> {
         execution_time_us: Option<u32>,
     ) {
         let used_time = execution_time_us.unwrap();
-        let returned = self.processes.pop_head().unwrap();
+        let returned = self.processes.borrow_mut().pop().unwrap();
 
         let reschedule = match result {
             StoppedExecutingReason::KernelPreemption => {
@@ -176,10 +166,12 @@ impl<'a, C: Chip> Scheduler<C> for PriorityRoundRobinSched<'a> {
 
         if !reschedule {
             let index = returned.proc.unwrap().processid().index as u32;
-            returned.set_prio(index * used_time);
-            self.done.push_head(returned);
+            returned.priority.set(index * used_time);
+            let _ = self.done.borrow_mut().push(returned);
         }
 
-        self.populate_with_new_priorities();
+        if self.processes.borrow().is_empty() {
+            self.populate_with_new_priorities();
+        }
     }
 }

@@ -459,6 +459,7 @@ impl Kernel {
                     scheduler.execute_kernel_work(chip);
                 }
                 false => {
+                    debug!("Asking scheduler");
                     // No kernel work ready, so ask scheduler for a process.
                     match scheduler.next(self) {
                         SchedulingDecision::RunProcess((appid, timeslice_us)) => {
@@ -517,6 +518,7 @@ impl Kernel {
             dwt::reset_timer();
         }
         loop {
+            debug!("Starting kernel loop");
             self.kernel_loop_operation(resources, chip, ipc, false, capability);
         }
     }

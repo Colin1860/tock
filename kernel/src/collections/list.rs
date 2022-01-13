@@ -2,8 +2,6 @@
 
 use core::cell::Cell;
 
-use crate::debug;
-
 pub struct ListLink<'a, T: 'a + ?Sized>(Cell<Option<&'a T>>);
 
 impl<'a, T: ?Sized> ListLink<'a, T> {
