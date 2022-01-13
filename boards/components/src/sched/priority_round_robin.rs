@@ -1,13 +1,8 @@
-use core::borrow::Borrow;
 use core::mem::MaybeUninit;
-use heapless::binary_heap::Min;
-use heapless::BinaryHeap;
-use heapless::Vec;
 use kernel::component::Component;
-use kernel::debug;
 use kernel::process::Process;
 use kernel::scheduler::priority_round_robin::{PRRProcessNode, PriorityRoundRobinSched};
-use kernel::{static_init, static_init_half};
+use kernel::{debug, static_init_half};
 
 #[macro_export]
 macro_rules! prr_component_helper {
@@ -17,7 +12,8 @@ macro_rules! prr_component_helper {
         use kernel::static_buf;
         const UNINIT: MaybeUninit<PRRProcessNode> = MaybeUninit::uninit();
         static mut BUF1: [MaybeUninit<PRRProcessNode>; $N] = [UNINIT; $N];
-        &mut BUF1
+        static mut BUF2: MaybeUninit<PriorityRoundRobinSched<'static>> = MaybeUninit::uninit();
+        (&mut BUF1, &mut BUF2)
     };};
 }
 
@@ -32,27 +28,29 @@ impl PriorityRoundRobinComponent {
 }
 
 impl Component for PriorityRoundRobinComponent {
-    type StaticInput = &'static mut [MaybeUninit<PRRProcessNode>];
+    type StaticInput = (
+        &'static mut [MaybeUninit<PRRProcessNode>],
+        &'static mut MaybeUninit<PriorityRoundRobinSched<'static>>,
+    );
     type Output = &'static mut PriorityRoundRobinSched<'static>;
 
     unsafe fn finalize(self, buf: Self::StaticInput) -> Self::Output {
-        let scheduler = static_init!(
+        let (nodes, sched) = buf;
+
+        let scheduler = static_init_half!(
+            sched,
             PriorityRoundRobinSched<'static>,
             PriorityRoundRobinSched::new()
         );
 
-        for (i, node) in buf.iter_mut().enumerate() {
+        for (i, node) in nodes.iter_mut().enumerate() {
             let init_node = static_init_half!(
                 node,
                 PRRProcessNode,
                 PRRProcessNode::new(&self.processes[i], i as u32)
             );
-            scheduler
-                .processes
-                .borrow_mut()
-                .push(init_node)
-                .map_err(|_| "Knallt beim ersten befüllen")
-                .unwrap();
+
+            let _ = scheduler.processes.borrow_mut().push(init_node);
         }
         scheduler
     }

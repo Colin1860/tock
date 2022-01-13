@@ -1,3 +1,4 @@
+use core::cell::RefMut;
 use core::cmp::Ord;
 use core::fmt::Binary;
 use core::{cell::Cell, cell::RefCell};
@@ -14,7 +15,7 @@ use crate::{
 /// Each node holds a pointer to a slot in the processes array
 
 pub struct PRRProcessNode {
-    proc: &'static Option<&'static dyn Process>,
+    pub proc: &'static Option<&'static dyn Process>,
     priority: Cell<u32>,
 }
 
@@ -67,13 +68,14 @@ impl<'a> PriorityRoundRobinSched<'a> {
         }
     }
 
-    fn populate_with_new_priorities(&self) {
-        if self.processes.borrow_mut().is_empty() {
-            while !self.done.borrow().is_empty() {
-                let _ = self
-                    .processes
-                    .borrow_mut()
-                    .push(self.done.borrow_mut().pop().unwrap());
+    fn populate_with_new_priorities(
+        &self,
+        mut heap: RefMut<BinaryHeap<&'a PRRProcessNode, Min, 8>>,
+    ) {
+        if heap.is_empty() {
+            let mut done = self.done.borrow_mut();
+            while !done.is_empty() {
+                let _ = heap.push(done.pop().unwrap());
             }
         }
     }
@@ -90,16 +92,13 @@ impl<'a, C: Chip> Scheduler<C> for PriorityRoundRobinSched<'a> {
 
             let mut next_proc: Option<&dyn Process> = None;
 
-            while self.processes.borrow().is_empty() {
-                debug!("I am empty");
-            }
-
             // Initial round robin scheduling not done yet
             // Find next ready process. Place any *empty* process slots, or not-ready
             // processes, at the back of the queue.
             'check: while !self.processes.borrow().is_empty() {
                 debug!("Running top loop");
-                while let Some(node) = self.processes.borrow_mut().pop() {
+                let mut borrowed = self.processes.borrow_mut();
+                while let Some(node) = borrowed.peek() {
                     match node.proc {
                         Some(proc) => {
                             if proc.ready() {
@@ -108,18 +107,18 @@ impl<'a, C: Chip> Scheduler<C> for PriorityRoundRobinSched<'a> {
                                 debug!("Priority scheduled: {}", node.priority.get());
                                 break 'check;
                             } else {
-                                let _ = self.done.borrow_mut().push(node);
+                                let _ = self.done.borrow_mut().push(borrowed.pop().unwrap());
                             }
                         }
                         None => {
                             node.priority.set(0);
-                            let _ = self.done.borrow_mut().push(node);
+                            let _ = self.done.borrow_mut().push(borrowed.pop().unwrap());
                         }
                     }
                 }
 
                 if next.is_none() {
-                    self.populate_with_new_priorities();
+                    self.populate_with_new_priorities(borrowed);
                 }
             }
 
@@ -168,10 +167,14 @@ impl<'a, C: Chip> Scheduler<C> for PriorityRoundRobinSched<'a> {
             let index = returned.proc.unwrap().processid().index as u32;
             returned.priority.set(index * used_time);
             let _ = self.done.borrow_mut().push(returned);
+        } else {
+            self.processes.borrow_mut().push(returned);
         }
 
-        if self.processes.borrow().is_empty() {
-            self.populate_with_new_priorities();
+        let processes = self.processes.borrow_mut();
+
+        if processes.is_empty() {
+            self.populate_with_new_priorities(processes);
         }
     }
 }

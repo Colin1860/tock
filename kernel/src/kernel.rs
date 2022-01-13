@@ -18,7 +18,6 @@ use crate::grant::{AllowRoSize, AllowRwSize, Grant, UpcallSize};
 use crate::ipc;
 use crate::memop;
 use crate::platform::chip::Chip;
-use crate::platform::mpu::MPU;
 use crate::platform::platform::ContextSwitchCallback;
 use crate::platform::platform::KernelResources;
 use crate::platform::platform::{ProcessFault, SyscallDriverLookup, SyscallFilter};
@@ -459,7 +458,6 @@ impl Kernel {
                     scheduler.execute_kernel_work(chip);
                 }
                 false => {
-                    debug!("Asking scheduler");
                     // No kernel work ready, so ask scheduler for a process.
                     match scheduler.next(self) {
                         SchedulingDecision::RunProcess((appid, timeslice_us)) => {
@@ -518,7 +516,6 @@ impl Kernel {
             dwt::reset_timer();
         }
         loop {
-            debug!("Starting kernel loop");
             self.kernel_loop_operation(resources, chip, ipc, false, capability);
         }
     }
@@ -633,7 +630,7 @@ impl Kernel {
                     //chip.mpu().enable_app_mpu();
                     scheduler_timer.arm();
                     let context_switch_reason = process.switch_to();
-                    //scheduler_timer.disarm();
+                    scheduler_timer.disarm();
                     //chip.mpu().disable_app_mpu();
 
                     // Now the process has returned back to the kernel. Check
